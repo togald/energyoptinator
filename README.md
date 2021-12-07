@@ -2,5 +2,5 @@
 
 ## Simulation class
 - Standard methods:
-- - step(): moves simulation one step forward
-- - 
+  - step(): moves simulation one step forward
+  - 
