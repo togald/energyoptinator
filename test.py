@@ -1,5 +1,9 @@
+import matplotlib.pyplot as plt
+import energyoptinator as energy
+
 class Simulation:    
-    def __init__(self, grids = {}, sources = {}, sinks = {}, convs = {}, storages = {}):
+    def __init__(self, name = "", grids = {}, sources = {}, sinks = {}, convs = {}, storages = {}):
+        self.name     = name
         self.grids    = grids
         self.sources  = sources
         self.sinks    = sinks
@@ -12,16 +16,31 @@ class Simulation:
             source.step()
         for name, sink in self.sinks.items():
             sink.step()
-        for name, conv in self.convs.items():
-            conv.step()
         for name, storage in self.storages.items():
             storage.step()
+        for name, conv in self.convs.items():
+            conv.step()
 
 class Grid:
     def __init__(self, name, sim):
         self.name       = name
         sim.grids[name] = self
         self.powers     = []
+        self.sources    = []
+        self.sinks      = []
+        self.storages   = []
+    def plot(self):
+        fig = plt.figure(1)
+        ax = plt.plot(grid.powers, label=gridname)
+        for source in self.sources:
+            ax = plt.plot(source.powers, label=source.name)
+        for sink in self.sinks:
+            ax = plt.plot(sink.powers, label=sink.name)
+        for storage in self.storages:
+            ax = plt.plot(storage.charges, label=storage.name)
+        fig.legend()
+        plt.title(self.name)
+        plt.show()
 
 class Source:
     def __init__(self, name, sim):
@@ -29,22 +48,24 @@ class Source:
         sim.sources[name] = self
 
 class SimpleSolar(Source):
-    def __init__(self, name, sim, grid, irradiance, efficiency, maxpower):
+    def __init__(self, name, sim, grid, irradiance, efficiency, area):
         Source.__init__(self, name, sim)
-        self.grid       = grid
+        self.grid       = sim.grids[grid]
+        self.grid.sources.append(self)
         self.irradiance = irradiance
         self.efficiency = efficiency
-        self.maxpower   = maxpower
+        self.area       = area
         self.powers     = []
     def step(self):
-        self.powers.append(self.irradiance[len(self.powers)] * self.efficiency * self.maxpower)
+        self.powers.append(self.irradiance[len(self.powers)] * self.efficiency * self.area)
         self.grid.powers[-1] += self.powers[-1]
 
 class Sink:
     def __init__(self, name, sim, grid):
         self.name       = name
         sim.sinks[name] = self
-        self.grid       = grid
+        self.grid       = sim.grids[grid]
+        self.grid.sinks.append(self)
 
 class SimpleSink(Sink):
     def __init__(self, name, sim, grid, drain):
@@ -60,11 +81,30 @@ class Conv:
         self.name       = name
         sim.convs[name] = self
 
+class Boiler(Conv):
+    def __init__(self, name, sim, inputgrid, outputgrid, efficiency=0.85):
+        Conv.__init__(self, name, sim)
+        self.inputgrid = sim.grids[inputgrid]
+        self.outputgrid = sim.grids[outputgrid]
+        self.inputgrid.sinks.append(self)
+        self.outputgrid.sources.append(self)
+        self.efficiency = efficiency
+        self.powers = []
+    def step(self):
+        self.powers.append(0)
+        if self.outputgrid.powers[-1] < 0:
+            self.powers[-1] += self.outputgrid.powers[-1] / self.efficiency
+            self.inputgrid.powers[-1] += self.powers[-1]
+            self.outputgrid.powers[-1] = 0
+        else:
+            pass
+
 class Storage:
     def __init__(self, name, sim, grid):
         self.name          = name
         sim.storages[name] = self
-        self.grid          = grid
+        self.grid          = sim.grids[grid]
+        self.grid.storages.append(self)
 
 class IdealBattery:
     def __init__(self, name, sim, grid, capacity, initialCharge):
@@ -76,7 +116,7 @@ class IdealBattery:
     def step(self):
         self.charges.append(self.charges[-1])
         if self.charges[-1] + self.grid.powers[-1] > self.capacity:
-            self.grid.powers -= self.capacity - self.charges[-1]
+            self.grid.powers[-1] -= self.capacity - self.charges[-1]
             self.charges[-1] = self.capacity
         elif self.charges[-1] + self.grid.powers[-1] < 0:
             self.grid.powers[-1] += self.charges[-1]
@@ -85,14 +125,20 @@ class IdealBattery:
             self.charges[-1] += self.grid.powers[-1]
             self.grid.powers[-1] = 0
 
+irradiance = [ 13, 24, 41, 90, 114, 108, 102, 105, 88, 90, 53, 16, 13 ]
+hushel = 500
+
 s = Simulation()
-Grid('electricity', s)
-SimpleSolar('solar1', s, s.grids['electricity'], [0, 1, 2], 0.2, 30)
-SimpleSink('sink1', s, s.grids['electricity'], [6, 6, 6])
-IdealBattery('bat1', s, s.grids['electricity'], 10, 5)
-for _ in range(3):
+Grid('El', s)
+Grid('Ved', s)
+Grid('Värme', s)
+SimpleSolar('Solceller', s, 'El', irradiance, 0.2, 30)
+SimpleSink('Hushållsel', s, 'El', hushel)
+IdealBattery('Batteri', s, 'El', 50, 25)
+Boiler('Värmepanna', s, 'Ved', 'El', 0.25)
+for _ in irradiance:
     s.step()
-print(s.sources['solar1'].powers)
-print(s.sinks['sink1'].powers)
-print(s.grids['electricity'].powers)
-print(s.storages['bat1'].charges)
+
+# Plot
+for gridname, grid in s.grids.items():
+    grid.plot()
