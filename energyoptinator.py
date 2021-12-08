@@ -59,10 +59,33 @@ class SimpleSink:
         self.powers[self.grid.name].append(-self.power)
         self.grid.powers[self.grid.name][-1] += self.powers[self.grid.name][-1]
 
+class SimpleBoiler:
+    def __init__(self, name, sim, fuelGrid, heatGrid, efficiency = 0.85):
+        self.name = name
+        sim.convs[name] = self
+        self.fuelGrid = sim.grids[fuelGrid]
+        self.heatGrid = sim.grids[heatGrid]
+        self.efficiency = efficiency
+        self.powers = { self.fuelGrid.name : [] 
+                      , self.heatGrid.name : []
+                      }
+        self.fuelGrid.powers[self.name] = self.powers[self.fuelGrid.name]
+        self.heatGrid.powers[self.name] = self.powers[self.heatGrid.name]
+    def step(self):
+        for name, power in self.powers.items(): 
+            power.append(0)
+        if self.heatGrid.powers[self.heatGrid.name][-1] < 0:
+            self.powers[self.heatGrid.name][-1] -= self.heatGrid.powers[self.heatGrid.name][-1]
+            self.heatGrid.powers[self.heatGrid.name][-1] = 0
+            self.powers[self.fuelGrid.name][-1] += self.powers[self.heatGrid.name][-1] / self.efficiency
+            self.fuelGrid.powers[self.fuelGrid.name][-1] += self.powers[self.fuelGrid.name][-1]
+
 s = Simulation('test')
-Grid('El', s)
-SimpleSource('Pwr1', s, 'El', 50)
-SimpleSink('Drain', s, 'El', 20)
+Grid('Heat', s)
+Grid('Wood', s)
+SimpleSource('Pwr1', s, 'Heat', 20)
+SimpleSink('Drain', s, 'Heat', 50)
+SimpleBoiler('Boiler1', s, 'Wood', 'Heat')
 for _ in range(8760):
     s.step()
 for name, grid in s.grids.items():
