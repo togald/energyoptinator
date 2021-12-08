@@ -7,8 +7,8 @@ class Simulation:
         self.grids    = grids
         self.sources  = sources
         self.sinks    = sinks
-        self.convs    = convs
         self.storages = storages
+        self.convs    = convs
     def step(self):
         for name, grid in self.grids.items(): 
             grid.powers.append(0)
@@ -125,20 +125,80 @@ class IdealBattery:
             self.charges[-1] += self.grid.powers[-1]
             self.grid.powers[-1] = 0
 
-irradiance = [ 13, 24, 41, 90, 114, 108, 102, 105, 88, 90, 53, 16, 13 ]
-hushel = 500
+def test1():
+    irradiance = [ 13, 24, 41, 90, 114, 108, 102, 105, 88, 90, 53, 16, 13 ]
+    hushel = 500
+    
+    s = Simulation()
+    Grid('El', s)
+    Grid('Ved', s)
+    Grid('Värme', s)
+    SimpleSolar('Solceller', s, 'El', irradiance, 0.2, 30)
+    SimpleSink('Hushållsel', s, 'El', hushel)
+    IdealBattery('Batteri', s, 'El', 50, 25)
+    Boiler('Värmepanna', s, 'Ved', 'El', 0.25)
+    for _ in irradiance:
+        s.step()
+    
+    # Plot
+    for gridname, grid in s.grids.items():
+        grid.plot()
 
-s = Simulation()
-Grid('El', s)
-Grid('Ved', s)
-Grid('Värme', s)
-SimpleSolar('Solceller', s, 'El', irradiance, 0.2, 30)
-SimpleSink('Hushållsel', s, 'El', hushel)
-IdealBattery('Batteri', s, 'El', 50, 25)
-Boiler('Värmepanna', s, 'Ved', 'El', 0.25)
-for _ in irradiance:
-    s.step()
+#test1()
 
-# Plot
-for gridname, grid in s.grids.items():
-    grid.plot()
+class TestSim:
+    def __init__(self):
+        self.grids = {}
+        self.entities = {}
+
+class TestGrid:
+    def __init__(self, name, sim):
+        self.name = name
+        sim.grids[name] = self
+        self.powers = { self.name : [] }
+        self.entities = []
+
+class TestEntity:
+    def __init__(self, name, sim, grid):
+        self.name = name
+        sim.entities[name] = self
+        self.grid   = sim.grids[grid]
+        self.grid.entities.append(self)
+        self.powers = { self.grid.name : [] }
+        self.grid.powers[self.name] = self.powers[self.grid.name]
+
+class TestEntity2:
+    def __init__(self, name, sim, grid1, grid2):
+        self.name = name
+        sim.entities[name] = self
+        self.grid1   = sim.grids[grid1]
+        self.grid1.entities.append(self)
+        self.grid2   = sim.grids[grid2]
+        self.grid2.entities.append(self)
+        self.powers = { self.grid1.name : []
+                      , self.grid2.name : []
+                      }
+        self.grid1.powers[self.name] = self.powers[self.grid1.name]
+        self.grid2.powers[self.name] = self.powers[self.grid2.name]
+
+s = TestSim()
+TestGrid('El', s)
+TestGrid('Värme', s)
+TestEntity('Sol', s, 'El')
+TestEntity2('Panna', s, 'El', 'Värme')
+
+print(s.grids['El'].powers)
+print(s.grids['Värme'].powers)
+print(s.entities['Panna'].powers)
+
+s.entities['Panna'].powers['El'].append(2)
+
+print(s.grids['El'].powers)
+print(s.grids['Värme'].powers)
+print(s.entities['Panna'].powers)
+
+s.grids['Värme'].powers['Panna'].append(2)
+
+print(s.grids['El'].powers)
+print(s.grids['Värme'].powers)
+print(s.entities['Panna'].powers)
