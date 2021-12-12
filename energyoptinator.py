@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 
 class Simulation:
-    def __init__( self, name = ""
+    def __init__( self
+                , name = ""
                 , grids = {}
                 , entities = {}
                 , storages = {} ):
