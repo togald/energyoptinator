@@ -41,18 +41,25 @@ class Simulation:
             ax = plt.plot(storage.charges, label=name)
         fig.legend()
         plt.title(self.name)
-        plt.show()
+        plt.savefig(f"Storages in {self.name}", dpi=96)
     def plot_all(self):
         n = len(self.grids.items())
-        fig, axlist = plt.subplots(math.ceil(n/2), 2)
-        for ax, (gridname, grid) in zip(axlist.flatten(), self.grids.items()):
+        m = len(self.storages.items())
+        fig, axlist = plt.subplots(math.ceil((n+m)/2), 2, figsize=(16, 4.5*n/2), dpi=120)
+        for ax, (gridname, grid) in zip(axlist.flatten()[:n], self.grids.items()):
             for name, data in grid.powers.items():
                 ax.plot(savgol_filter(_6min_to_hours(data), 155, 3), label=name)
             ax.set_title(gridname)
             ax.set_xlabel(grid.timesteplabel)
             ax.set_ylabel(grid.unit)
+            ax.legend( bbox_to_anchor = (1.05, 1) )
+        for ax, (storagename, storage) in zip(axlist.flatten()[n:], self.storages.items()):
+            ax.plot(storage.charges, label=storagename)
+            ax.set_title(storagename)
+            ax.legend( bbox_to_anchor = (1.05, 1) )
+        fig.suptitle(self.name)
         plt.tight_layout()
-        plt.show()
+        plt.savefig(self.name, dpi=96)
 
 class Grid:
     def __init__(self, name, sim, unit = 'kW', timesteplabel = 'Hours'):
@@ -97,7 +104,6 @@ class Grid:
         plt.ylabel(self.unit)
         plt.xlabel(self.timesteplabel)
         plt.title(self.name)
-        plt.tight_layout()
         plt.show()
 
 class SimpleSource:
