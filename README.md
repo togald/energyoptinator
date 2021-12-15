@@ -10,7 +10,7 @@ The real benefit of a simulation like this over an Excel spreadsheet is that it 
 ## How to use
 The standard library is `energyoptinator.py`. `test.py` contains a few test cases to help you get started with simulations, and `svenska_schabloner.py` is an extra library containing somewhat accurate average values for a swedish household's energy use. 
 
-    ![Example simulation results]('/The off-grid house.png')
+![Example simulation results](image.png)
 
 ## Todo
 - More comments in code
