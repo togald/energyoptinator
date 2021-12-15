@@ -28,13 +28,15 @@ class Simulation:
             grid.step()
         for _, storage in self.storages.items():
             storage.step()
+
     def plot_grids(self):
         fig = plt.figure(1)
         for name, grid in self.grids.items():
             ax = plt.plot(grid.powers[name], label=name)
         fig.legend()
         plt.title(self.name)
-        plt.show()
+        plt.savefig(f"Grids in {self.name}", dpi=96)
+
     def plot_storages(self):
         fig = plt.figure(1)
         for name, storage in self.storages.items():
@@ -42,27 +44,31 @@ class Simulation:
         fig.legend()
         plt.title(self.name)
         plt.savefig(f"Storages in {self.name}", dpi=96)
+
     def plot_all(self):
         n = len(self.grids.items())
         m = len(self.storages.items())
         fig, axlist = plt.subplots(math.ceil((n+m)/2), 2, figsize=(16, 4.5*n/2), dpi=120)
         for ax, (gridname, grid) in zip(axlist.flatten()[:n], self.grids.items()):
             for name, data in grid.powers.items():
-                ax.plot(savgol_filter(_6min_to_hours(data), 155, 3), label=name)
+                ax.plot(hourly_to_weekly(_6min_to_hourly(data)), label=name)
             ax.set_title(gridname)
             ax.set_xlabel(grid.timesteplabel)
             ax.set_ylabel(grid.unit)
-            ax.legend( bbox_to_anchor = (1.05, 1) )
+            ax.legend( bbox_to_anchor=(1.05, 1) )
         for ax, (storagename, storage) in zip(axlist.flatten()[n:], self.storages.items()):
-            ax.plot(storage.charges, label=storagename)
-            ax.set_title(storagename)
-            ax.legend( bbox_to_anchor = (1.05, 1) )
+            ax.plot([ c/storage.capacity for c in _6min_to_hourly([i/10 for i in storage.charges[1:] ] ) ], label=storagename)
+            ax.set_title(f"{storagename}, {storage.capacity} kWh")
+            ax.set_ylabel('SoC')
+            ax.set_xlabel('Hour')
+            ax.legend( bbox_to_anchor=(1.05, 1) )
         fig.suptitle(self.name)
         plt.tight_layout()
         plt.savefig(self.name, dpi=96)
 
+
 class Grid:
-    def __init__(self, name, sim, unit = 'kW', timesteplabel = 'Hours'):
+    def __init__(self, name, sim, unit = 'kW', timesteplabel = 'Week'):
         """ Creates a new Grid object. The new Grid object holds its
         name, places a reference to itself in the simulation it belongs
         to, and contains a dictionary with lists of all contributing
@@ -74,11 +80,13 @@ class Grid:
         self.unit = unit
         self.timesteplabel = timesteplabel
         self.powers = { self.name : [] }
+
     def step(self):
         self.powers[self.name].append(0)
         for name, power in self.powers.items():
             if name in self.sim.entities.keys():
                 self.powers[self.name][-1] += power[-1]
+
     def plot(self):
         """ Grid.plot() plots a time diagram of all additions and
         subtractions from the grid, one series per connected entity.
@@ -92,10 +100,11 @@ class Grid:
         plt.title(self.name)
         plt.tight_layout()
         plt.show()
+
     def plot_smoothed(self):
         """ Grid.plot() plots a time diagram of all additions and
-        subtractions from the grid, one series per connected entity, 
-        but smoothed. 
+        subtractions from the grid, one series per connected entity,
+        but smoothed.
         """
         fig = plt.figure(1)
         for name, power in self.powers.items():
@@ -105,6 +114,7 @@ class Grid:
         plt.xlabel(self.timesteplabel)
         plt.title(self.name)
         plt.show()
+
 
 class SimpleSource:
     def __init__(self, name, sim, grid, power):
@@ -118,14 +128,16 @@ class SimpleSource:
         self.power = power
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         self.powers[self.grid.name].append(self.power)
 
+
 class TimevariantSource:
     def __init__(self, name, sim, grid, supply):
-        """ TimevariantSink takes a list or tuple of data as input, 
-        and appends the appropriate time step to its power output 
-        every step. 
+        """ TimevariantSink takes a list or tuple of data as input,
+        and appends the appropriate time step to its power output
+        every step.
         """
         self.name = name
         sim.entities[name] = self
@@ -133,8 +145,10 @@ class TimevariantSource:
         self.supply = supply
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         self.powers[self.grid.name].append(self.supply[len(self.powers[self.grid.name])])
+
 
 class SimpleSink:
     def __init__(self, name, sim, grid, power):
@@ -148,14 +162,16 @@ class SimpleSink:
         self.power = power
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         self.powers[self.grid.name].append(-self.power)
 
+
 class TimevariantSink:
     def __init__(self, name, sim, grid, drain):
-        """ TimevariantSink takes a list or tuple of data as input, 
-        and appends the appropriate time step to its power output 
-        every step. 
+        """ TimevariantSink takes a list or tuple of data as input,
+        and appends the appropriate time step to its power output
+        every step.
         """
         self.name = name
         sim.entities[name] = self
@@ -163,8 +179,10 @@ class TimevariantSink:
         self.drain = drain
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         self.powers[self.grid.name].append(-self.drain[len(self.powers[self.grid.name])])
+
 
 class SimpleStorage:
     def __init__(self, name, sim, grid, capacity, initialCharge):
@@ -180,10 +198,11 @@ class SimpleStorage:
         self.initialCharge = initialCharge
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
-        """ Step the storage. Storages are tricky to step since they 
-        must adhere to both overflowing, being completely emptied, and 
-        also make sure to update the grid accordingly. 
+        """ Step the storage. Storages are tricky to step since they
+        must adhere to both overflowing, being completely emptied, and
+        also make sure to update the grid accordingly.
         """
         # Make sure to store initial charge on the first step
         if not self.charges:
@@ -205,6 +224,7 @@ class SimpleStorage:
             self.powers[self.grid.name].append(-self.grid.powers[self.grid.name][-1])
             self.grid.powers[self.grid.name][-1] = 0
             self.charges[-1] -= self.powers[self.grid.name][-1]
+
     def soc(self):
         if self.charges:
             return self.charges[-1]/self.capacity
@@ -222,6 +242,7 @@ class Battery:
         self.selfDischargeRate = selfDischargeRate
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         if not self.charges:
             self.charges.append(self.initialCharge)
@@ -242,16 +263,18 @@ class Battery:
             self.powers[self.grid.name].append(-self.grid.powers[self.grid.name][-1])
             self.grid.powers[self.grid.name][-1] = 0
             self.charges[-1] -= self.powers[self.grid.name][-1]
+
     def soc(self):
         if self.charges:
             return self.charges[-1]/self.capacity
         else:
             return self.initialCharge/self.capacity
 
+
 class RegulatedSource:
     def __init__(self, name, sim, grid, power, regulator, signal):
-        """ RegulatedSource is a source that varies according to its 
-        regulator between 0 and self.power power output. 
+        """ RegulatedSource is a source that varies according to its
+        regulator between 0 and self.power power output.
         """
         self.name = name
         sim.entities[name] = self
@@ -261,11 +284,13 @@ class RegulatedSource:
         self.signal = signal
         self.powers = { self.grid.name : [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         if self.signal:
             self.powers[self.grid.name].append(self.power*self.regulator.step(self.signal))
         else:
             self.powers[self.grid.name].append(0)
+
 
 class SimpleSolar:
     def __init__(self, name, sim, grid, irradiance, efficiency, area):
@@ -281,11 +306,13 @@ class SimpleSolar:
         self.area = area
         self.powers = { self.grid.name: [] }
         self.grid.powers[self.name] = self.powers[self.grid.name]
+
     def step(self):
         self.powers[self.grid.name].append(self.irradiance[len(self.powers[self.grid.name])] * self.efficiency * self.area)
 
+
 class SimpleBoiler:
-    def __init__(self
+    def __init__( self
                 , name
                 , sim
                 , fuelGrid
@@ -307,6 +334,7 @@ class SimpleBoiler:
         self.signal = signal
         self.thermalRatedPower = thermalRatedPower
         self.fuelUse = fuelUse
+
     def step(self):
         if self.signal:
             reg = self.regulator.step(self.signal)
@@ -344,6 +372,7 @@ class CHPboiler:
         self.thermalRatedPower = thermalRatedPower
         self.electricityRatedPower = electricityRatedPower
         self.fuelUse = fuelUse
+
     def step(self):
         if self.signal:
             reg = self.regulator.step(self.signal)
@@ -353,25 +382,27 @@ class CHPboiler:
         self.powers[self.heatGrid.name].append(reg*self.thermalRatedPower)
         self.powers[self.electricityGrid.name].append(reg*self.electricityRatedPower)
 
+
 class OnoffRegulator:
     def __init__(self, onThr, offThr, initState, flip=0):
-        """ Simplest possible regulator there is, an on/off regulator. 
-        onThr is the low point where the regulator turns on, offThr 
-        is the high point where the regulator turns off. Outputs a 
-        signal that is either 0 or 1, nothing in between. 
+        """ Simplest possible regulator there is, an on/off regulator.
+        onThr is the low point where the regulator turns on, offThr
+        is the high point where the regulator turns off. Outputs a
+        signal that is either 0 or 1, nothing in between.
         """
         self.onThr = onThr
         self.offThr = offThr
         self.states = []
         self.initState = initState
         self.flip = flip
+
     def step(self, signal):
-        """ Steps the regulator. Regulators must be passed their 
-        signal every step for it to update. OnoffRegulator requires 
-        the signal to be a function returning a value between 0 and 1, 
-        ideally a Storage.soc() method. 
+        """ Steps the regulator. Regulators must be passed their
+        signal every step for it to update. OnoffRegulator requires
+        the signal to be a function returning a value between 0 and 1,
+        ideally a Storage.soc() method.
         """
-        # If there is no previous step, the regulator is set to its initial state. 
+        # If there is no previous step, the regulator is set to its initial state.
         if not self.states:
             self.states.append(self.initState)
         # Things to do if regulator was previously on
@@ -388,66 +419,64 @@ class OnoffRegulator:
                 self.states.append(0)
         if self.flip:
             return 1-self.states[-1]
-        else: 
+        else:
             return self.states[-1]
 
-def _6min_to_hours(data):
+## STANDARD DATA MANIPULATORS
+#
+# These are some standard functions to manipulate data into different
+# resolutions. Some of them might be destructive - be careful.
+def increase_resolution(data, magnifier):
     output = []
-    for i in range(len(data)//10):
-        output.append(sum(data[i*10-10:i*10]))
+    for d in data:
+        for _ in range(magnifier):
+            output.append(d/magnifier)
     return output
 
-def dem1():
-    s = Simulation('test')
-    Grid('Heat', s)
-    SimpleSource('Boiler', s, 'Heat', 20)
-    SimpleSink('Drain', s, 'Heat', 50)
-    SimpleStorage('Acc', s, 'Heat', 100000, 100000)
-    for _ in range(8760):
-        s.step()
-    for name, grid in s.grids.items():
-        grid.plot()
-    s.plot_grids()
-    s.plot_storages()
+def decrease_resolution(data, denominator):
+    output = []
+    for i in range(len(data)//denominator):
+        output.append(sum(data[i*denominator-denominator:i*denominator]))
+    return output
 
-def testreg():
-    import random
-    reg = OnoffRegulator(0.3, 0.7, 0)
-    for _ in range(30):
-        signal = random.random()
-        if reg.states:
-            print(f"{reg.states[-1]} : {signal:1.3f} : {reg.step(signal)}")
-        else:
-            print(f"0 : {signal:1.3f} : {reg.step(signal)}")
+def monthly_to_daily(data):
+    """ This function takes monthly data and converts it into smoothed
+    daily data. To get weekly data, it is advised to go via this
+    function first.
+    """
+    months = [31, 28, 31, 30, 31, 30, 31, 30, 31, 31, 30, 31]
+    output =  []
+    for month, d in zip(months, data):
+        for _ in range(month):
+            output.append(d/month)
+    return savgol_filter(output, 201, 3)
 
-def testreg2():
-    s = Simulation('Test')
-    Grid('Heat', s)
-    SimpleSink('Space heater', s, 'Heat', 2)
-    SimpleStorage('Acc1', s, 'Heat', 20, 5)
-    reg = OnoffRegulator(0.3, 0.7, 0)
-    RegulatedSource('Boiler', s, 'Heat', 10, reg, s.storages['Acc1'].soc)
-    for _ in range(20):
-        s.step()
-    for _, grid in s.grids.items():
-        grid.plot()
-    s.plot_storages()
+def monthly_to_weekly(data):
+    return daily_to_weekly(monthly_to_daily(data))
 
-def testchp():
-    s = Simulation('Test')
-    Grid('Heat', s)
-    Grid('Electricity', s)
-    Grid('Woodpellets', s, unit='kg')
-    SimpleSink('Space heater', s, 'Heat', 0.3)
-    SimpleStorage('Accumulator', s, 'Heat', 20, 5)
-    reg = OnoffRegulator(0.3, 0.7, 0)
-    sig = s.storages['Accumulator'].soc
-    CHPboiler('Furnace', s, 'Woodpellets', 'Heat', 'Electricity', reg, sig, thermalRatedPower=1.4, electricityRatedPower=0.1, fuelUse=0.52)
-    for _ in range(200):
-        s.step()
-    for _, grid in s.grids.items():
-        grid.plot()
-    s.plot_storages()
+def daily_to_hourly(data):
+    return increase_resolution(data, 24)
+
+def daily_to_hourly_smoothed(data):
+    return savgol_filter(daily_to_hourly(data), 47, 2)
+
+def hourly_to_6min(data):
+    return increase_resolution(data, 10)
+
+def hourly_to_6min_smoothed(data):
+    return savgol_filter(hourly_to_6min(data), 19, 5)
+
+def _6min_to_hourly(data):
+    return decrease_resolution(data, 10)
+
+def hourly_to_daily(data):
+    return [ i/24 for i in decrease_resolution(data, 24) ]
+
+def hourly_to_weekly(data):
+    return [ i/168 for i in decrease_resolution(data, 168) ]
+
+def daily_to_weekly(data):
+    return [ i/7 for i in decrease_resolution(data, 7) ]
 
 if __name__ == '__main__':
-    testchp()
+    pass
