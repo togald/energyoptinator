@@ -1,5 +1,18 @@
 # Energy-optinator
-This is a framework for running energy simulations for small- and medium-sized energy systems. It can be used for larger systems, but those usually require more intricate analysis and behave more dynamically. 
+This is a framework for running energy simulations for small- and medium-sized energy systems. It can be used for larger systems, but those usually require more intricate analysis and behave more dynamically. Typically questions this program can help answer:
+
+- How much solar power should I add to my house? 
+- If I change the water temperature my furnace turns on at, is that going to affect its fuel use? 
+- I don't have a grid connection, how much fuel is my generator going to use? 
+
+The real benefit of a simulation like this over an Excel spreadsheet is that it can also tell us stuff like cycle degradation in batteries, take self-discharge rates into account etc. 
 
 ## How to use
-There are a couple of test cases in `energyoptinator.py`. Larger test cases are avaliable in `test.py`, including a complete simulation of an off-grid house. 
+The standard library is `energyoptinator.py`. `test.py` contains a few test cases to help you get started with simulations, and `svenska_schabloner.py` is an extra library containing somewhat accurate average values for a swedish households' energy use. 
+
+## Todo
+- More comments in code? 
+- Use numpy-arrays for data? 
+- Make simulation time-aware? Automatic data interpolation according to simulation parameters? 
+    - Datetime objects to store date, automatic interpolation depending on desired resolution? 
+- Read data from file, methods for each object? 
