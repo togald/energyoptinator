@@ -11,8 +11,8 @@ The real benefit of a simulation like this over an Excel spreadsheet is that it 
 The standard library is `energyoptinator.py`. `test.py` contains a few test cases to help you get started with simulations, and `svenska_schabloner.py` is an extra library containing somewhat accurate average values for a swedish households' energy use. 
 
 ## Todo
-- More comments in code? 
-- Use numpy-arrays for data? 
+- More comments in code
+- Use numpy-arrays for data? Pandas time series, maybe? 
 - Make simulation time-aware? Automatic data interpolation according to simulation parameters? 
-    - Datetime objects to store date, automatic interpolation depending on desired resolution? 
-- Read data from file, methods for each object? 
+    - Datetime objects to store date, automatic interpolation depending on desired resolution? This could be where Pandas comes in. 
+- Read data from file, methods for each object? Centralized method, have it return data in the right format for the simulation? 
