@@ -8,7 +8,7 @@ This is a framework for running energy simulations for small- and medium-sized e
 The real benefit of a simulation like this over an Excel spreadsheet is that it can also tell us stuff like cycle degradation in batteries, take self-discharge rates into account etc. 
 
 ## How to use
-The standard library is `energyoptinator.py`. `test.py` contains a few test cases to help you get started with simulations, and `svenska_schabloner.py` is an extra library containing somewhat accurate average values for a swedish households' energy use. 
+The standard library is `energyoptinator.py`. `test.py` contains a few test cases to help you get started with simulations, and `svenska_schabloner.py` is an extra library containing somewhat accurate average values for a swedish household's energy use. 
 
 ## Todo
 - More comments in code
