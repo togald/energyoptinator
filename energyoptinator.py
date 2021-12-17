@@ -449,7 +449,17 @@ def monthly_to_daily(data):
     for month, d in zip(months, data):
         for _ in range(month):
             output.append(d/month)
-    return savgol_filter(output, 201, 3)
+    return output
+
+def monthly_to_power(data):
+    """ This function takes monthly energy use and converts it to 
+    monthly average power, which is beetter for some applications. 
+    """
+    months = [31, 28, 31, 30, 31, 30, 31, 30, 31, 31, 30, 31]
+    output = []
+    for month, d in zip(months, data):
+        output.append(d/(month*24))
+    return output
 
 def monthly_to_weekly(data):
     return daily_to_weekly(monthly_to_daily(data))
