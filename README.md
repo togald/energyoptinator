@@ -1,5 +1,5 @@
 # Energy-optinator
-This is a framework for running energy simulations for small- and medium-sized energy systems. It can be used for larger systems, but those usually require more intricate analysis and behave more dynamically. Typicall questions this program can help answer:
+This is a framework for running energy simulations for small- and medium-sized energy systems. It can be used for larger systems, but those usually require more intricate analysis and behave more dynamically. Typical questions this program can help answer:
 
 - How much solar power should I add to my house? 
 - If I change the water temperature my furnace turns on at, is that going to affect its fuel use? 
