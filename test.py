@@ -48,20 +48,20 @@ def offgrid_house_sim():
     eo.SimpleSink('Household electricity', s, 'Electricity', hushel)
     eo.TimevariantSink('Hot water', s, 'Heat', se.hourly_to_6min(se.daily_to_hourly(se.monthly_to_daily(se.hemsol_tvv(tvv)))))
     eo.TimevariantSink('Space heating', s, 'Heat', se.hourly_to_6min(se.daily_to_hourly(se.monthly_to_daily(se.hemsol_varme(varme)))))
-    #eo.Battery('Battery', s, 'Electricity', 20, 15, 0.03/30/24/10)
-    #eo.SimpleStorage('Accumulator', s, 'Heat', 50, 25)
-    eo.SimpleSolar('Solar', s, 'Electricity', irr, 0.18, 40)
+    eo.Battery('Battery', s, 'Electricity', 20, 15, 0.03/30/24/10)
+    eo.SimpleStorage('Accumulator', s, 'Heat', 50, 25)
+    eo.SimpleSolar('Solar', s, 'Electricity', irr, 0.18, 60)
     heatreg = eo.OnoffRegulator(0.4, 0.6, 1)
-    #heatsig = s.storages['Accumulator'].soc
+    heatsig = s.storages['Accumulator'].soc
     # Based on Valtis Viva GT stirling furnace, 20 kW thermal power and 1 kW electric power, 90% thermal efficiency.
-    #eo.CHPboiler('Furnace', s, 'Wood pellets', 'Heat', 'Electricity', heatreg, heatsig, thermalRatedPower=2, electricityRatedPower=0.1, fuelUse=2.333333333333)
+    eo.CHPboiler('Furnace', s, 'Wood pellets', 'Heat', 'Electricity', heatreg, heatsig, thermalRatedPower=2, electricityRatedPower=0.1, fuelUse=2.333333333333)
     # Based on Microgen natural gas generator, 5 kW thermal power, 1 kW electrical power, 6.5 kW fuel
     #eo.CHPboiler('Furnace', s, 'Wood pellets', 'Heat', 'Electricity', heatreg, heatsig, thermalRatedPower=.79, electricityRatedPower=0.07, fuelUse=1)
     elreg = eo.OnoffRegulator(0.3, 0.6, 1)
-    #elsig = s.storages['Battery'].soc
+    elsig = s.storages['Battery'].soc
     # Based on Honda EU22i. 1.8 kW electric power, 1,0909 l gasoline/h, heat recovery with efficiency of 80%
     # https://www.honda.se/industrial/get-a-brochure/_jcr_content/par1/textcolumnwithimagem/textColumn/richtextdownload_ba5/file.res/262264_PL_LO262264.pdf
-    #eo.CHPboiler('Generator', s, 'Gasoline', 'Heat', 'Electricity', elreg, elsig, thermalRatedPower=0.66, electricityRatedPower=0.18, fuelUse=1.0145)
+    eo.CHPboiler('Generator', s, 'Gasoline', 'Heat', 'Electricity', elreg, elsig, thermalRatedPower=0.66, electricityRatedPower=0.18, fuelUse=1.0145)
     # Based on Honda EU70is, Honda's most efficient gasoline generator.
     #eo.CHPboiler('Generator', s, 'Gasoline', 'Heat', 'Electricity', elreg, elsig, thermalRatedPower=1.75766, electricityRatedPower=0.55, fuelUse=2.7471)
     solheatreg = eo.OnoffRegulator(0.89, 0.9, 0, 1)
