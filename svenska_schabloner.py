@@ -30,7 +30,7 @@ def hemsol_tvv_smoothed(yearly):
     return savgol_filter(monthly_to_daily(hemsol_tvv(yearly)), 201, 3)
 
 def hemsol_varme(yearly):
-    """ Hemsol comfort heat splitter. Takes a yearly hot water usage
+    """ Hemsol comfort heat splitter. Takes a yearly comfort heat usage
     and splits it into monthly usage.
     """
     modifiers = [2, 1.7, 1.7, 1.3, 0.6, 0.2, 0, 0, 0.4, 0.9, 1.4, 1.8]
